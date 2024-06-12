@@ -1,0 +1,69 @@
+- name: Defition de l'horodatage
+  set_fact:
+    horodatage: "{{ ansible_date_time.date }}-{{ ansible_date_time.time | regex_replace(':','-') }}"
+
+- name: Dump du schema applicatif vers un fichier compresse
+  postgresql_db:
+    name: "{{ database.name }}"
+    state: dump
+    target: "/tmp/backup/{{ nexus.artifactid }}-{{ env }}-{{ horodatage }}.sql"
+    #target_opts: "-n {{ database.schema }}"
+    login_host: "{{ env_database.postgresql_server_host }}"
+    login_user: "{{ database.username }}@{{ env_database.postgresql_server_name }}"
+    login_password: "{{ env_database.userpwd }}"
+    ca_cert: /root/root.crt
+    ssl_mode: require
+  register: backup
+  no_log: true
+  ignore_errors: true
+
+- name: Backup file name
+  debug: 
+    msg: "{{ nexus.artifactid }}-{{ env }}-{{ horodatage }}.sql"
+
+- name: Préparation affichage - backup
+  set_fact: 
+    backup_results: "{{ backup | json_query('results[*].stdout') | string }}"
+    backup_errors: "{{ backup | json_query('results[*].stderr') | string }}"
+    backup_msg: "{{ backup | json_query('results[*].msg') | string }}"
+    backup_rc: "{{ backup | json_query('results[*].rc') }}"
+
+- name: Affiche les messages de l'execution de la tache de backup
+  debug:
+    msg: "{{ backup_msg.split('\\n') }}"
+
+- name: Affiche le resultat de l'execution de la tache de backup
+  debug:
+    msg: "{{ backup_results.split('\\n') }}"
+
+- name: Affiche les erreurs de l'execution de la tache de backup
+  debug:
+    msg: "{{ backup_errors.split('\\n') }}"
+  failed_when: backup_rc | sum != 0
+
+- name: Changement de mode a executable du script archive.py
+  copy:
+    src: files/archive.py
+    dest: /tmp/archive.py
+    mode: '0744'
+
+- name: Crée le conteneur backup and upload a file
+  shell: "AZURE_STORAGE_CONNECTION_STRING=\"{{ vault_azure_storage_connection_string }}\" python /tmp/archive.py -d /tmp/backup/{{ nexus.artifactid }}-{{ env }}-{{ horodatage }}.sql"
+  register: storage
+  no_log: true
+  #ignore_errors: true
+  
+- name: Préparation affichage - archivage du backup
+  set_fact: 
+    storage_results: "{{ storage | json_query('results[*].stdout') | string }}"
+    storage_errors: "{{ storage | json_query('results[*].stderr') | string }}"
+    storage_rc: "{{ storage | json_query('results[*].rc') }}"
+
+- name: Affiche le resultat de l'execution de la tache d'archivage du backup
+  debug:
+    msg: "{{ storage_results.split('\\n') }}"
+
+- name: Affiche les erreurs de l'execution de la tache d'archivage du backup
+  debug:
+    msg: "{{ storage_errors.split('\\n') }}"
+  failed_when: storage_rc | sum != 0

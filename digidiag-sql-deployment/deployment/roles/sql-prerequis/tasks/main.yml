@@ -1,0 +1,55 @@
+- name: Lecture du nom du playbook
+  set_fact:
+    playbook_name: "{{ (lookup('file', '/proc/self/cmdline') | regex_replace('\u0000',' ')).split()| select('match','^[a-z-_/]*[.]y[a]*ml')|list| first|basename}}"
+
+- name: Create backup directory in /tmp
+  file:
+    path: "/tmp/backup"
+    state: directory
+    mode: '0775'
+    recurse: yes
+
+- name: Create backup directory in /tmp
+  file:
+    path: "/tmp/{{ nexus.artifactid }}"
+    state: directory
+    mode: '0775'
+    recurse: yes
+
+- name: installation de postgresql client
+  apk:
+    name: "postgresql-client"
+    update_cache: yes
+
+- name: Test version psql
+  shell: "psql --version"
+
+- name: Installation de azure-storage-blob
+  pip:
+    name: azure-storage-blob
+
+- name: Telechargement des scripts de migration depuis Nexus
+  maven_artifact:
+    group_id: "{{ nexus.group_id }}"
+    artifact_id: "{{ nexus.artifactid }}"
+    version: "{{ nexus.version }}"
+    extension: zip
+    repository_url: "{{ nexus.nexus_url }}/{{ nexus.nexus_repo }}"
+    username: "{{ nexus.username }}"
+    password: "{{ env_nexus.userpwd }}"
+    dest: "/tmp/{{ nexus.artifactid }}.zip"
+
+- name: Test de connexion au serveur postgresql
+  shell: "psql \"host={{ env_database.postgresql_server_host }} port=5432 dbname={{ database.name }} user={{ database.username }}@{{ env_database.postgresql_server_name }} password={{ env_database.userpwd }} sslmode=require\" -l"
+  register: test
+  ignore_errors: true 
+  no_log: true
+
+- name: Affiche le resultat de l'execution du script 
+  debug:
+    msg: "{{ test.stdout.split('\n') }}"
+
+- name: Affiche les erreurs de l'execution du script 
+  debug:
+    msg: "{{ test.stderr.split('\n') }}"
+  failed_when: test.rc != 0

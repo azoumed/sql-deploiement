@@ -1,0 +1,140 @@
+# BLOCK FOR NORMAL INSTALLATION
+- name: Normal installation
+  block:
+
+    - name: Run MDL ordinary queries script
+      shell: "psql \"host={{ env_database.postgresql_server_host }} port=5432 dbname={{ database.name }} user={{ database.username }}@{{ env_database.postgresql_server_name }} password={{ env_database.userpwd }} sslmode=require\" -f {{ item }} -v \"ON_ERROR_STOP=1\""
+      register: mdl_ordinary
+      loop: "{{ list_ordinary_mdl_file_sql.stdout_lines }}"
+      ignore_errors: true 
+      no_log: true
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    - name: Préparation affichage - mdl_ordinary
+      set_fact: 
+        mdl_ordinary_results: "{{ mdl_ordinary | json_query('results[*].stdout') | string }}"
+        mdl_ordinary_errors: "{{ mdl_ordinary | json_query('results[*].stderr') | string }}"
+        mdl_ordinary_msg: "{{ mdl_ordinary | json_query('results[*].msg') | string }}"
+        mdl_ordinary_rc: "{{ mdl_ordinary | json_query('results[*].rc') }}"
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    - name: Affiche les messages de l'execution de la tache de mdl_ordinary
+      debug:
+        msg: "{{ mdl_ordinary_msg.split('\\n') }}"
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    - name: Affiche le resultat de l'execution de la tache de mdl_ordinary
+      debug:
+        msg: "{{ mdl_ordinary_results.split('\\n') }}"
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    - name: Affiche les erreurs de l'execution de la tache de mdl_ordinary
+      debug:
+        msg: "{{ mdl_ordinary_errors.split('\\n') }}"
+      failed_when: mdl_ordinary_rc | sum != 0
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    - name: Run DDL ordinary queries script
+      shell: "psql \"host={{ env_database.postgresql_server_host }} port=5432 dbname={{ database.name }} user={{ database.username }}@{{ env_database.postgresql_server_name }} password={{ env_database.userpwd }} sslmode=require\" -f {{ item }} -v \"ON_ERROR_STOP=1\""
+      register: ddl_ordinary
+      loop: "{{ list_ordinary_ddl_file_sql.stdout_lines }}"
+      ignore_errors: true 
+      no_log: true
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+    - name: Préparation affichage - ddl_ordinary
+      set_fact: 
+        ddl_ordinary_results: "{{ ddl_ordinary | json_query('results[*].stdout') | string }}"
+        ddl_ordinary_errors: "{{ ddl_ordinary | json_query('results[*].stderr') | string }}"
+        ddl_ordinary_msg: "{{ ddl_ordinary | json_query('results[*].msg') | string }}"
+        ddl_ordinary_rc: "{{ ddl_ordinary | json_query('results[*].rc') }}"
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+    - name: Affiche les messages de l'execution de la tache de ddl_ordinary
+      debug:
+        msg: "{{ ddl_ordinary_msg.split('\\n') }}"
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+    - name: Affiche le resultat de l'execution de la tache de ddl_ordinary
+      debug:
+        msg: "{{ ddl_ordinary_results.split('\\n') }}"
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+    - name: Affiche les erreurs de l'execution de la tache de ddl_ordinary
+      debug:
+        msg: "{{ ddl_ordinary_errors.split('\\n') }}"
+      failed_when: ddl_ordinary_rc | sum != 0
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+  when: playbook_name == "playbook.yml"
+
+# BLOCK FOR ROLLBACK INSTALLATION
+- name: Rollback installation
+  block:
+
+    - name: Run DDL rollback queries script
+      shell: "psql \"host={{ env_database.postgresql_server_host }} port=5432 dbname={{ database.name }} user={{ database.username }}@{{ env_database.postgresql_server_name }} password={{ env_database.userpwd }} sslmode=require\" -f {{ item }} -v \"ON_ERROR_STOP=1\""
+      register: ddl_rollback
+      loop: "{{ list_rollback_ddl_file_sql.stdout_lines }}"
+      ignore_errors: true 
+      no_log: true 
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+    - name: Préparation affichage - ddl_rollback
+      set_fact: 
+        ddl_rollback_results: "{{ ddl_rollback | json_query('results[*].stdout') | string }}"
+        ddl_rollback_errors: "{{ ddl_rollback | json_query('results[*].stderr') | string }}"
+        ddl_rollback_msg: "{{ ddl_rollback | json_query('results[*].msg') | string }}"
+        ddl_rollback_rc: "{{ ddl_rollback | json_query('results[*].rc') }}"
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+    - name: Affiche les messages de l'execution de la tache de ddl_rollback
+      debug:
+        msg: "{{ ddl_rollback_msg.split('\\n') }}"
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+    - name: Affiche le resultat de l'execution de la tache de ddl_rollback
+      debug:
+        msg: "{{ ddl_rollback_results.split('\\n') }}"
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+    - name: Affiche les erreurs de l'execution de la tache de ddl_rollback
+      debug:
+        msg: "{{ ddl_rollback_errors.split('\\n') }}"
+      failed_when: ddl_rollback_rc | sum != 0
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+    - name: Run MDL rollback queries script
+      shell: "psql \"host={{ env_database.postgresql_server_host }} port=5432 dbname={{ database.name }} user={{ database.username }}@{{ env_database.postgresql_server_name }} password={{ env_database.userpwd }} sslmode=require\" -f {{ item }} -v \"ON_ERROR_STOP=1\""
+      register: mdl_rollback
+      loop: "{{ list_rollback_mdl_file_sql.stdout_lines }}"
+      ignore_errors: true 
+      no_log: true
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    - name: Préparation affichage - mdl_rollback
+      set_fact: 
+        mdl_rollback_results: "{{ mdl_rollback | json_query('results[*].stdout') | string }}"
+        mdl_rollback_errors: "{{ mdl_rollback | json_query('results[*].stderr') | string }}"
+        mdl_rollback_msg: "{{ mdl_rollback | json_query('results[*].msg') | string }}"
+        mdl_rollback_rc: "{{ mdl_rollback | json_query('results[*].rc') }}"
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    - name: Affiche les messages de l'execution de la tache de mdl_rollback
+      debug:
+        msg: "{{ mdl_rollback_msg.split('\\n') }}"
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    - name: Affiche le resultat de l'execution de la tache de mdl_rollback
+      debug:
+        msg: "{{ mdl_rollback_results.split('\\n') }}"
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    - name: Affiche les erreurs de l'execution de la tache de mdl_rollback
+      debug:
+        msg: "{{ mdl_rollback_errors.split('\\n') }}"
+      failed_when: mdl_rollback_rc | sum != 0
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+
+  when: playbook_name != "playbook.yml"

@@ -1,0 +1,6 @@
+---
+- hosts: all
+  roles:
+    - role: sql-prerequis
+    - role: sql-checking
+    - role: sql-install

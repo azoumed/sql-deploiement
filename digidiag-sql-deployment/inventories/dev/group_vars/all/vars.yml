@@ -1,0 +1,17 @@
+#Database parameters for dev environment
+env_database: 
+  postgresql_server_host: pzbdiotd01.postgres.database.azure.com
+  userpwd: "{{ vault_userdbpwd }}"
+  postgresql_server_name: pzbdiotd01
+
+env_suffix: "-SNAPSHOT"
+
+# Nexus parameters
+env_nexus:
+  nexus_repo: -snapshots 
+  userpwd: "{{ vault_usernexuspwd }}"
+
+# Information for the SP
+env_azure:
+  tenant: "{{ vault_tenant }}"
+  client_id: "{{ vault_client_id }}"

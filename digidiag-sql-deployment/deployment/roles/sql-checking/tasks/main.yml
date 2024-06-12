@@ -1,0 +1,88 @@
+- name: Extract zip into /tmp
+  unarchive:
+    src: "/tmp/{{ nexus.artifactid }}.zip"
+    dest: "/tmp/{{ nexus.artifactid }}"
+
+- name: Count the rollback file sql scripts
+  shell: ls -lrt /tmp/{{ nexus.artifactid }}/*
+
+- name: Count the rollback file sql scripts
+  shell: ls /tmp/{{ nexus.artifactid }}/** | egrep  "sql$" | grep rollback | wc -l
+  register: nb_file_rollback
+  
+- name: Count the ordinary file sql scripts
+  shell: ls /tmp/{{ nexus.artifactid }}/** | egrep  "sql$" | grep -v rollback | wc -l
+  register: nb_file_ordinary
+
+- name: Check if the rollback script are presente
+  debug: 
+    msg: Rollback scripts are missing
+  failed_when: nb_file_rollback.stdout != nb_file_ordinary.stdout
+
+- name: Check if DDL directory exists
+  stat:
+    path: /tmp/{{ nexus.artifactid }}/ddl
+  register: r_dir_ddl_check
+
+- name: Check if MDL directory exists
+  stat:
+    path: /tmp/{{ nexus.artifactid }}/mdl
+  register: r_dir_mdl_check
+
+# BLOCK FOR NORMAL CHECKING
+- name: Normal checking of scripts
+  block:
+    ## MDL ORDINARY FILES
+    - name: Get the list of ordinary files in MDL folder
+      shell: ls /tmp/{{ nexus.artifactid }}/mdl/* | egrep  "sql$" | grep -v rollback
+      register: list_ordinary_mdl_file_sql
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    - name: List of MDL files (ordinary or rollback) to be run
+      debug: 
+        msg: "{{ item }}"
+      loop: "{{ list_ordinary_mdl_file_sql.stdout_lines }}"
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    ## DDL ORDINARY FILES
+    - name: Get the list of ordinary files in DDL folder
+      shell: ls /tmp/{{ nexus.artifactid }}/ddl/** | egrep  "sql$" | grep -v rollback
+      register: list_ordinary_ddl_file_sql
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+    - name: List of DDL files ordinary  to be run
+      debug: 
+        msg: "{{ item }}"
+      loop: "{{ list_ordinary_ddl_file_sql.stdout_lines }}"
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+  when: playbook_name == "playbook.yml"
+
+# BLOCK FOR ROLLBACK CHECKING
+- name: Rollback checking of scripts
+  block: 
+    ## MDL ROLLBACK FILES
+    - name: Get the list of rollback files in MDL folder
+      shell: ls -r /tmp/{{ nexus.artifactid }}/mdl/* | egrep  "sql$" | grep rollback
+      register: list_rollback_mdl_file_sql
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    - name: List of MDL files rollback to be run
+      debug: 
+        msg: "{{ item }}"
+      loop: "{{ list_rollback_mdl_file_sql.stdout_lines }}"
+      when: r_dir_mdl_check.stat.exists and r_dir_mdl_check.stat.isdir
+
+    ## DDL ROLLBACK FILES
+    - name: Get the list of rollback files in DDL folder
+      shell: ls -r /tmp/{{ nexus.artifactid }}/ddl/** | egrep  "sql$" | grep rollback
+      register: list_rollback_ddl_file_sql
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+    - name: List of DDL files rollback to be run
+      debug: 
+        msg: "{{ item }}"
+      loop: "{{ list_rollback_ddl_file_sql.stdout_lines }}"
+      when: r_dir_ddl_check.stat.exists and r_dir_ddl_check.stat.isdir
+
+  when: playbook_name != "playbook.yml"

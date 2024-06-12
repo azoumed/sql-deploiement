@@ -1,0 +1,22 @@
+# Global Database parameters 
+database:
+  name: biottld
+  schema: sc_biottld_default
+  username: "{{ env_database.username | default('u_biottld_owner') }}"
+
+# Global Nexus parameters
+nexus:
+  group_id: sncf.mobilite.groupetelediag-mat-dsit-mat.digidiag
+  artifactid: telediagnostic-sql
+  nexus_url: "https://nexusm-repo-mob.apps.eul.sncf.fr/repository/"
+  nexus_repo: maven-groupetelediag-mat-dsit-mat{{ env_nexus.nexus_repo }}
+  username: "{{ env_nexus.username | default('itn-groupetelediag-mat-dsit-mat-readonly') }}"
+  version:  2.2.46{{ env_suffix }}
+
+azure:
+  subscription_id: "{{ env_nexus.subscription_id | default('61032fad-1596-4d1b-b864-73182daf582c') }}"
+  tenant: "{{ env_azure.tenant }}"
+  client_id: "{{ env_azure.client_id }}"
+  resource_group: rg-dig-np-app-iot-npd
+  storage_account_name: pzsaeotnp01
+  container: backup-telediagnostic-sql
